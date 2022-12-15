@@ -1,23 +1,24 @@
 import React from 'react'
 import { useEffect } from 'react'
 import { useMemo } from 'react'
+import { useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { SaveOutlined } from '@mui/icons-material'
-import { Button, Grid, TextField, Typography } from '@mui/material'
+import { DeleteOutline, SaveOutlined, UploadOutlined } from '@mui/icons-material'
+import { Button, Grid, IconButton, TextField, Typography } from '@mui/material'
 import Swal from 'sweetalert2'
 import 'sweetalert2/dist/sweetalert2.css'
 
 import { useForm } from '../../hooks/useForm'
 import { setActiveNote } from '../../store/journal/journalSlice'
-import { startSavingNotes } from '../../store/journal/thunks'
+import { startDeletingNote, startSavingNotes, startUploadingFiles } from '../../store/journal/thunks'
 import { ImageGallery } from '../components'
 
 export const NoteView = () => {
 
     const dispatch = useDispatch();
 
-    const { active: activeNote, messageSaved } = useSelector(x => x.journal);
+    const { active: activeNote, messageSaved, isSaving } = useSelector(x => x.journal);
 
     const { body, title, date, onInputChange, formState } = useForm(activeNote);
 
@@ -42,6 +43,32 @@ export const NoteView = () => {
         dispatch(startSavingNotes());
     }
 
+    const fileInputRef = useRef();
+
+    const onFileInputChange = ({ target }) => {
+        if (target.files === 0) return;
+        console.log("Dizque subiendo archivos");
+        dispatch(startUploadingFiles(target.files));
+    }
+
+    const onDelete = () => {
+        Swal.fire({
+            title: 'Delete note',
+            text: 'You sure you want to delete this note?',
+            icon: 'warning',
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            showConfirmButton: true,
+            showCancelButton: true
+        }).then(x => {
+            if (x.isConfirmed) {
+                dispatch(startDeletingNote());
+                Swal.fire('', 'Note deleted successfuly', 'success')
+            }
+        })
+
+    }
+
     return (
         <Grid container direction='row' justifyContent='space-between' alignItems='center' sx={{ mb: 1 }}>
             <Grid item>
@@ -49,6 +76,25 @@ export const NoteView = () => {
             </Grid>
 
             <Grid item>
+
+                <input
+                    type="file"
+                    accept='.png,.jpg,.webp,.jpeg'
+                    multiple
+                    ref={fileInputRef}
+                    onChange={onFileInputChange}
+                    style={{ display: 'none' }}
+                />
+                <IconButton
+                    color='primary'
+                    disabled={isSaving}
+                    onClick={() => fileInputRef.current.click()}
+                >
+                    <UploadOutlined />
+                </IconButton>
+
+
+
                 <Button
                     onClick={onSaveNote}
                     color='primary'
@@ -86,7 +132,19 @@ export const NoteView = () => {
                 />
             </Grid>
 
-            <ImageGallery />
+            <Grid container justifyContent='end'>
+                <Button
+                    onClick={onDelete}
+                    sx={{ mt: 2 }}
+                    color='error'
+                >
+                    <DeleteOutline />
+                    Borrar
+                </Button>
+
+            </Grid>
+
+            <ImageGallery images={activeNote.imageUrls} />
 
         </Grid>
     )
